@@ -52,7 +52,7 @@ export function InstallPwa() {
         onClick={install}
         className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--color-surface-elevated)] px-4 py-3 text-sm font-semibold shadow-xl"
         style={{ color: "var(--accent)" }}
-        aria-label="Instalar aplicativo Bela Face"
+        aria-label="Instalar aplicativo Agendamento"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2" aria-hidden="true">
           <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
@@ -63,7 +63,7 @@ export function InstallPwa() {
       {showHelp && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
           <div className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 shadow-2xl">
-            <h2 className="text-lg font-semibold">Instalar o Bela Face</h2>
+            <h2 className="text-lg font-semibold">Instalar o Agendamento</h2>
             {isWindows ? (
               <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
                 No Chrome ou Edge, clique no ícone de instalação na barra de endereço e escolha <strong>Instalar</strong>.

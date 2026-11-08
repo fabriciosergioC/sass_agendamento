@@ -1,68 +1,87 @@
-"use client";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { LoginForm } from "./login-form";
+import { BACKEND_URL } from "@/lib/backend";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+type SearchParams = Promise<{ clinica?: string }>;
 
-export default function LoginPage() {
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+type OrgInfo = { name: string; slug: string; description: string | null };
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+/** Dados públicos da clínica no backend (rota server-only, sem CORS). */
+async function getOrg(slug: string): Promise<OrgInfo | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/public/${slug}/config`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { org?: OrgInfo };
+    return data.org ?? null;
+  } catch {
+    return null;
+  }
+}
 
-    try {
-      // Comunicação direta com a API do backend
-      const res = await fetch("https://gestao-estetica.up.railway.app/api/cliente-portal/bela-face/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", phone: phone.trim() }),
-      });
+/**
+ * /login?clinica=bela-face — link que a clínica envia aos clientes.
+ * A guia do navegador e a prévia do WhatsApp mostram o nome daquela clínica
+ * ("Bela Face - Agendamento", "Dellas - Agendamento"...). Sem o parâmetro,
+ * a guia fica só "Agendamento" (a página serve várias clínicas, não só a Bela Face).
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  // Sempre usa título genérico, independentemente do parâmetro `clinica`
+  const { clinica } = await searchParams;
+  const h = await headers();
+  const host = h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const base = host ? `${proto}://${host}` : "https://sass-agendamento-seven.vercel.app";
+  const genericTitle = "Agendamento";
+  const genericDescription = "Agende seu horário direto pelo celular.";
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erro ao fazer login");
-      }
+  return {
+    metadataBase: new URL(base),
+    title: { absolute: genericTitle },
+    description: genericDescription,
+    openGraph: {
+      title: genericTitle,
+      description: genericDescription,
+      siteName: genericTitle,
+      type: "website",
+      url: `${base}/login${clinica ? `?clinica=${clinica}` : ""}`,
+    },
+    twitter: { card: "summary", title: genericTitle, description: genericDescription },
+  };
+}
 
-      // Redireciona para o portal se sucesso
-      window.location.href = "https://gestao-estetica.up.railway.app/c/bela-face/painel";
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+/**
+ * Com `cacheComponents`, o acesso a searchParams precisa ficar dentro de
+ * <Suspense> para não bloquear o prerender do resto da rota (docs do Next 16).
+ */
+export default function LoginPage({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <Suspense fallback={null}>
+      <LoginRoute searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function LoginRoute({ searchParams }: { searchParams: SearchParams }) {
+  const { clinica } = await searchParams;
+
+  // Link já identifica a clínica: não pede o número de novo, vai direto ao agendamento
+  // dela (mesmo comportamento de achar 1 clínica na busca).
+  if (clinica) {
+    const org = await getOrg(clinica);
+    if (org) {
+      redirect(`https://gestao-estetica.up.railway.app/b/${org.slug}`);
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-950 text-white">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-zinc-900 p-6 rounded-2xl border border-zinc-800 shadow-xl">
-        <h1 className="text-xl font-semibold mb-6">Acesse seu agendamento</h1>
-
-        <div className="space-y-2 mb-4">
-          <label className="text-sm text-zinc-400">WhatsApp (com DDD)</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(11) 99999-9999"
-            className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 focus:border-gold-500 outline-none"
-            required
-          />
-        </div>
-
-        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gold-500 text-zinc-950 font-semibold py-3 rounded-lg hover:bg-gold-400 disabled:opacity-50"
-        >
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-    </div>
-  );
+  return <LoginForm />;
 }

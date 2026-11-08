@@ -13,10 +13,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Bela Face - Agendamento",
-    // "Bela Face" é o que fica embaixo do ícone na tela inicial (limite prático ~12 chars)
-    short_name: "Bela Face",
-    description: "Agende seu horário na Bela Face direto pelo celular.",
+    name: "Agendamento",
+    short_name: "Agendamento",
+    description: "Agende seu horário direto pelo celular.",
     start_url: "/",
     scope: "/",
     // standalone = abre em janela própria, sem a barra do navegador: parece um app

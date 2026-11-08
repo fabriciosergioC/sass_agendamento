@@ -17,9 +17,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bela Face - Agendamento",
-  description: "Agende seu horário na Bela Face direto pelo celular.",
-  applicationName: "Bela Face",
+  // Disable sharing image by providing empty image arrays
+  openGraph: { title: "Agendamento", description: "Agende seu horário direto pelo celular.", type: "website", images: [] },
+  twitter: { card: "summary", images: [] },
+  // Título genérico: o site serve várias clínicas. O nome de cada uma entra via
+  // generateMetadata nas páginas /login?clinica={slug} (Vercel) e /b|/c/{slug} (Railway).
+  title: "Agendamento",
+  description: "Agende seu horário direto pelo celular.",
+  applicationName: "Agendamento",
   // O <link rel="manifest"> vem do arquivo src/app/manifest.ts, injetado pelo Next.
   icons: {
     icon: "/icons/icon-192.png",
@@ -29,7 +34,7 @@ export const metadata: Metadata = {
   // o que faz o app abrir em janela própria, com o nome e a barra de status certos.
   appleWebApp: {
     capable: true,
-    title: "Bela Face",
+    title: "Agendamento",
     statusBarStyle: "black-translucent",
   },
   // O Next 16 traduz `capable` para a tag moderna <meta name="mobile-web-app-capable">.
@@ -38,6 +43,7 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
   },
+
 };
 
 // themeColor e width/initialScale viviam dentro de metadata; no Next 16 isso é
