@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold-300: #e7c886;
+  --color-gold-400: #dcb367;
+  --color-gold-500: #d4a24e;
+  --color-gold-600: #b0863c;
+  --color-gold-700: #8a672c;
+  --color-on-accent: #09090b;
+
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+  --color-surface: #faf7f2;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e8e0d8;
+  --color-text-primary: #2d2d2d;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #9b9b9b;
+}
+
+:root {
+  --accent: #d4a24e;
+  --accent-lift: #ffffff;
+  --accent-shade: #000000;
+
+  --color-gold-300: color-mix(in oklab, var(--accent), var(--accent-lift) 34%);
+  --color-gold-400: color-mix(in oklab, var(--accent), var(--accent-lift) 16%);
+  --color-gold-500: var(--accent);
+  --color-gold-600: color-mix(in oklab, var(--accent), var(--accent-shade) 18%);
+  --color-gold-700: color-mix(in oklab, var(--accent), var(--accent-shade) 38%);
+}
+
+html[data-theme="dark"] {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-surface: #18181b;
+  --color-surface-elevated: #27272a;
+  --color-border: #27272a;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+}
+
+html[data-accent="azul"] { --accent: #4f8fd6; }
+html[data-accent="verde"] { --accent: #3aa876; }
+html[data-accent="roxo"] { --accent: #8b6fd6; }
+html[data-accent="rosa"] { --accent: #d9629b; }
+html[data-accent="vermelho"] { --accent: #d9534f; }
+html[data-accent="gold"] { --accent: #d4a24e; }
+
+/* Adicionado para garantir que o fundo do body e html sejam aplicados */
+html, body {
+  background-color: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
