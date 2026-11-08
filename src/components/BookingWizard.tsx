@@ -489,25 +489,6 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
               {slotsLoading ? "atualizando..." : slotsRefreshing ? "verificando..." : "atualizar"}
             </button>
           </div>
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex items-center gap-2 text-[11px] text-[var(--color-text-muted)]"
-          >
-            <span
-              aria-hidden
-              className={`h-1.5 w-1.5 rounded-full ${slotsError ? "bg-red-500" : "bg-emerald-500"} ${slotsLoading || slotsRefreshing ? "animate-pulse" : ""}`}
-            />
-            {slotsLoading
-              ? "Consultando o backend..."
-              : slotsRefreshing
-              ? "Verificando alterações no backend..."
-              : slotsError
-              ? "Não foi possível confirmar os horários agora."
-              : slotsUpdatedAt
-              ? `Ao vivo · atualizado às ${new Date(slotsUpdatedAt).toLocaleTimeString("pt-BR", { hour12: false })}`
-              : "Disponibilidade ao vivo"}
-          </div>
           {slotsLoading ? (
             <div className="grid grid-cols-4 gap-2" aria-label="Carregando horários">
               {Array.from({ length: 12 }).map((_, i) => (
