@@ -26,7 +26,7 @@ async function BookingWizardLoader() {
           <h1 className="text-lg font-semibold text-red-600">Erro ao carregar organização</h1>
           <p className="text-sm text-gray-600 mt-2">
             O backend não respondeu em {BACKEND_URL}. Rode <code>npm run dev</code> na pasta
-            do sass barbearia (porta 3001) e recarregue.
+            do sass estetica (porta 3001) e recarregue.
           </p>
         </div>
       </div>

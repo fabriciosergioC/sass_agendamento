@@ -5,7 +5,7 @@
  *
  * O frontend nao tem dependencia de QR, e a maquina e apertada de RAM/disso.
  * Entao reaproveitamos o pacote `qrcode-terminal` que JÁ existe no node_modules
- * do backend (sass barbearia). Se ele nao for encontrado, o script so avisa e
+ * do backend (sass estetica). Se ele nao for encontrado, o script so avisa e
  * sai sem QR - o link continua funcionando, o QR e conveniencia.
  */
 const path = require('node:path');
@@ -22,7 +22,7 @@ if (!url) {
 const candidatos = [
   backendPath && path.join(backendPath, 'node_modules', 'qrcode-terminal'),
   path.join(__dirname, '..', 'node_modules', 'qrcode-terminal'),
-  'C:\\Users\\fabri\\OneDrive\\Documentos\\sass barbearia\\node_modules\\qrcode-terminal',
+  'C:\\Users\\fabri\\OneDrive\\Documentos\\sass estetica\\node_modules\\qrcode-terminal',
 ].filter(Boolean);
 
 let qr = null;

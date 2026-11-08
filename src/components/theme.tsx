@@ -29,8 +29,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = readTheme();
-    applyTheme(saved);
-    setTheme(saved);
+    // Sincroniza o tema salvo sem disparar setState síncrono no corpo do effect.
+    const frame = requestAnimationFrame(() => setTheme(saved));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {

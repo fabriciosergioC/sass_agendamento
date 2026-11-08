@@ -43,7 +43,7 @@ param(
   [int]$BackendPort = 3001,
   [string]$Slug = 'bela-face',
   [string]$Url = '',
-  [string]$BackendPath = 'C:\Users\fabri\OneDrive\Documentos\sass barbearia',
+  [string]$BackendPath = 'C:\Users\fabri\OneDrive\Documentos\sass estetica',
   [string]$ConfigPath = '__auto__',
   [switch]$Stop,
   [switch]$NoQr,

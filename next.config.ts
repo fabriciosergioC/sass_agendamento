@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Proxy público de agendamento para o backend sass-barbearia.
+  // Proxy público de agendamento para o backend sass estetica.
   // Redireciona /api/public/* para o backend local (porta 3001 por padrão),
   // então o navegador do cliente só conhece ESTE servidor. É isso que permite
   // publicar apenas um túnel ngrok (o do frontend) e manter o backend em localhost.

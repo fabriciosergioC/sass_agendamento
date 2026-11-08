@@ -12,7 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Cópia antiga do backend guardada dentro do frontend; não faz parte deste app.
+    "sass barbearia/**",
   ]),
+  {
+    files: ["**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

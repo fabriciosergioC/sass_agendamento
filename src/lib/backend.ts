@@ -1,5 +1,5 @@
 /**
- * Endereço interno do backend sass-barbearia.
+ * Endereço interno do backend sass estetica.
  *
  * Regra de ouro deste projeto: o navegador do cliente NUNCA fala direto com o
  * backend. Todo request vem para este frontend (porta 3000) e é resolvido aqui:

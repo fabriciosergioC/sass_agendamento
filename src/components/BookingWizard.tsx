@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "./theme";
+import { buildSlotsUrl, clinicToday, parseSlots, slotReasonLabel, slotsEqual, type Slot } from "@/lib/slots";
 
 type Svc = {
   id: string;
@@ -18,12 +19,6 @@ type Brb = {
   bio: string | null;
   specialties: string;
   serviceIds: string[];
-};
-
-type Slot = {
-  start: string;
-  available: boolean;
-  reason?: string;
 };
 
 type OrgInfo = {
@@ -54,10 +49,6 @@ function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function toDateInput(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export default function BookingWizard({ org }: { org: OrgInfo }) {
   const { colors } = useTheme();
   const [services, setServices] = useState<Svc[]>([]);
@@ -68,10 +59,15 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
   const [step, setStep] = useState(1);
   const [service, setService] = useState<Svc | null>(null);
   const [barber, setBarber] = useState<Brb | null>(null);
-  const [date, setDate] = useState<string>(toDateInput(new Date()));
+  const [date, setDate] = useState<string>(clinicToday());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsRefreshing, setSlotsRefreshing] = useState(false);
+  const [slotsUpdatedAt, setSlotsUpdatedAt] = useState<number | null>(null);
   const [slotsError, setSlotsError] = useState("");
+  const slotsRequestRef = useRef<AbortController | null>(null);
+  const slotsRequestIdRef = useRef(0);
+  const slotsLoadedRef = useRef(false);
   const [time, setTime] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -104,32 +100,99 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
     return barbers.filter((b) => b.serviceIds.length === 0 || b.serviceIds.includes(service.id));
   }, [barbers, service]);
 
-  const loadSlots = useCallback(async () => {
+  const loadSlots = useCallback(async (options?: { silent?: boolean }) => {
     if (!service || !barber || !date) return;
-    setSlotsLoading(true);
-    setSlotsError("");
-    setTime("");
+
+    const silent = options?.silent === true;
+    // A primeira consulta é sempre manual/visível; o polling não abre a tela com
+    // uma mensagem vazia enquanto essa primeira resposta ainda está a caminho.
+    if (silent && !slotsLoadedRef.current) return;
+
+    // Cancela a consulta anterior para que uma resposta atrasada nunca mostre
+    // horários de outro dia, serviço ou atendente.
+    slotsRequestRef.current?.abort();
+    const controller = new AbortController();
+    slotsRequestRef.current = controller;
+    const requestId = ++slotsRequestIdRef.current;
+
+    if (silent) {
+      setSlotsRefreshing(true);
+    } else {
+      slotsLoadedRef.current = false;
+      setSlotsLoading(true);
+      setSlotsRefreshing(false);
+      setSlotsUpdatedAt(null);
+      setSlotsError("");
+      setSlots([]);
+      setTime("");
+    }
     try {
-      const res = await fetch(
-        `/api/public/${org.slug}/slots?serviceId=${encodeURIComponent(service.id)}&barberId=${encodeURIComponent(barber.id)}&date=${encodeURIComponent(date)}`,
-        { cache: "no-store" }
-      );
-      const data = await res.json().catch(() => ({}));
+      const res = await fetch(buildSlotsUrl(org.slug, service.id, barber.id, date), {
+        cache: "no-store",
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      const data = await res.json().catch(() => null);
+      if (requestId !== slotsRequestIdRef.current || controller.signal.aborted) return;
       if (!res.ok) {
-        throw new Error(data.error ?? "Não foi possível consultar os horários.");
+        throw new Error(data?.error ?? "Não foi possível consultar os horários.");
       }
-      setSlots(Array.isArray(data.slots) ? data.slots : []);
+      const parsed = parseSlots(data);
+      slotsLoadedRef.current = true;
+      setSlotsUpdatedAt(Date.now());
+      setSlotsError("");
+      setSlots((prev) => (slotsEqual(prev, parsed) ? prev : parsed));
     } catch (err) {
+      if (requestId !== slotsRequestIdRef.current || controller.signal.aborted) return;
+      slotsLoadedRef.current = true;
       setSlots([]);
       setSlotsError(err instanceof Error ? err.message : "Não foi possível consultar os horários.");
     } finally {
-      setSlotsLoading(false);
+      if (requestId === slotsRequestIdRef.current && !controller.signal.aborted) {
+        setSlotsLoading(false);
+        setSlotsRefreshing(false);
+      }
     }
   }, [org.slug, service, barber, date]);
 
+  const refreshSlots = useCallback(() => {
+    void loadSlots();
+  }, [loadSlots]);
+
   useEffect(() => {
-    if (step === 4) loadSlots();
+    if (step !== 4) return;
+
+    let active = true;
+    let timer: number | undefined;
+
+    const schedule = () => {
+      if (active) timer = window.setTimeout(() => { void poll(); }, 5000);
+    };
+    const poll = async () => {
+      if (document.visibilityState === "visible") await loadSlots({ silent: true });
+      schedule();
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadSlots({ silent: true });
+    };
+
+    // Enquanto a etapa de horário está aberta, reconsulta o backend a cada 5 s.
+    // Assim, salvar o funcionamento no painel aparece aqui sem precisar recarregar.
+    schedule();
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [step, loadSlots]);
+
+  useEffect(() => () => {
+    slotsRequestIdRef.current += 1;
+    slotsRequestRef.current?.abort();
+  }, []);
 
   async function submit() {
     setError("");
@@ -158,7 +221,7 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
         setError(data.error ?? "Não foi possível agendar. Tente novamente.");
         if (String(data.error ?? "").includes("ocupado") || String(data.error ?? "").includes("horário")) {
           setStep(4);
-          loadSlots();
+          void loadSlots();
         }
         return;
       }
@@ -171,11 +234,19 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
   }
 
   function restart() {
+    slotsRequestIdRef.current += 1;
+    slotsRequestRef.current?.abort();
+    slotsLoadedRef.current = false;
     setDone(null);
     setStep(1);
     setService(null);
     setBarber(null);
-    setDate(toDateInput(new Date()));
+    setDate(clinicToday());
+    setSlots([]);
+    setSlotsLoading(false);
+    setSlotsRefreshing(false);
+    setSlotsUpdatedAt(null);
+    setSlotsError("");
     setTime("");
     setName("");
     setPhone("");
@@ -183,7 +254,7 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
     setError("");
   }
 
-  const todayStr = toDateInput(new Date());
+  const todayStr = clinicToday();
   const [y, m, d] = date.split("-").map(Number);
   const dateLabel = d && m
     ? `${WEEKDAY_LABELS[new Date(y, m - 1, d).getDay()]}, ${d} de ${MONTHS[m - 1]}`
@@ -312,7 +383,7 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
           {services.map((s) => (
             <button
               key={s.id}
-              onClick={() => { setService(s); setBarber(null); setStep(2); }}
+              onClick={() => { setService(s); setBarber(null); setSlots([]); setTime(""); setStep(2); }}
               className="flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left transition-colors hover:bg-[var(--color-surface)]"
             >
               <div>
@@ -336,7 +407,7 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
           {eligibleBarbers.map((b) => (
             <button
               key={b.id}
-              onClick={() => { setBarber(b); setStep(3); }}
+              onClick={() => { setBarber(b); setSlots([]); setTime(""); setStep(3); }}
               className="flex w-full items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left transition-colors hover:bg-[var(--color-surface)]"
             >
               <div
@@ -365,7 +436,8 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
             className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2.5 text-sm focus:border-[var(--color-gold)] focus:outline-none text-[var(--color-text-primary)]"
           />
           <button
-            onClick={() => setStep(4)}
+            type="button"
+            onClick={() => { setStep(4); void loadSlots(); }}
             className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors"
             style={{ backgroundColor: accent }}
           >
@@ -375,49 +447,88 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
       )}
 
       {step === 4 && (
-        <section className="space-y-4">
+        <section className="space-y-4" aria-busy={slotsLoading}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-[var(--color-text-primary)]">Horários para {dateLabel}</h2>
-            <button onClick={loadSlots} className="text-xs" style={{ color: accent }}>
-              atualizar
+            <button
+              type="button"
+              onClick={refreshSlots}
+              disabled={slotsLoading}
+              title="Os horários são reconsultados automaticamente a cada 5 segundos"
+              className="text-xs disabled:opacity-50"
+              style={{ color: accent }}
+            >
+              {slotsLoading ? "atualizando..." : slotsRefreshing ? "verificando..." : "atualizar"}
             </button>
           </div>
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 text-[11px] text-[var(--color-text-muted)]"
+          >
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 rounded-full ${slotsError ? "bg-red-500" : "bg-emerald-500"} ${slotsLoading || slotsRefreshing ? "animate-pulse" : ""}`}
+            />
+            {slotsLoading
+              ? "Consultando o backend..."
+              : slotsRefreshing
+              ? "Verificando alterações no backend..."
+              : slotsError
+              ? "Não foi possível confirmar os horários agora."
+              : slotsUpdatedAt
+              ? `Ao vivo · atualizado às ${new Date(slotsUpdatedAt).toLocaleTimeString("pt-BR", { hour12: false })}`
+              : "Disponibilidade ao vivo"}
+          </div>
           {slotsLoading ? (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2" aria-label="Carregando horários">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="h-9 animate-pulse rounded-lg bg-[var(--color-nude)]" />
               ))}
             </div>
           ) : slotsError ? (
-            <div className="rounded-xl border border-dashed border-red-500/30 bg-[var(--color-surface)] p-6 text-center">
+            <div role="alert" className="rounded-xl border border-dashed border-red-500/30 bg-[var(--color-surface)] p-6 text-center">
               <p className="text-sm text-red-500">{slotsError}</p>
-              <button onClick={loadSlots} className="mt-2 text-xs underline" style={{ color: accent }}>
+              <button type="button" onClick={refreshSlots} className="mt-2 text-xs underline" style={{ color: accent }}>
                 tentar novamente
+              </button>
+            </div>
+          ) : slots.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
+              <p className="text-sm text-[var(--color-text-secondary)]">O atendente não atende nesta data.</p>
+              <button type="button" onClick={() => setStep(3)} className="mt-2 text-xs underline" style={{ color: accent }}>
+                escolher outro dia
               </button>
             </div>
           ) : slots.filter((s) => s.available).length === 0 ? (
             <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
               <p className="text-sm text-[var(--color-text-secondary)]">Sem horários livres neste dia.</p>
-              <button onClick={() => setStep(3)} className="mt-2 text-xs underline" style={{ color: accent }}>
+              <button type="button" onClick={() => setStep(3)} className="mt-2 text-xs underline" style={{ color: accent }}>
                 escolher outro dia
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-2">
-              {slots.map((s) => (
-                <button
-                  key={s.start}
-                  disabled={!s.available}
-                  onClick={() => { setTime(s.start); setStep(5); }}
-                  className={`rounded-lg border px-2 py-2 text-sm transition-colors ${
-                    !s.available
-                      ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed"
-                      : "border-[var(--color-gold)] bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-nude)]"
-                  }`}
-                >
-                  {s.start}
-                </button>
-              ))}
+              {slots.map((s) => {
+                const reasonLabel = slotReasonLabel(s.reason);
+                return (
+                  <button
+                    key={s.start}
+                    type="button"
+                    disabled={!s.available}
+                    title={reasonLabel}
+                    aria-label={reasonLabel ? `${s.start} — ${reasonLabel}` : s.start}
+                    onClick={() => { setTime(s.start); setStep(5); }}
+                    className={`rounded-lg border px-2 py-2 text-sm transition-colors ${
+                      !s.available
+                        ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed line-through"
+                        : "border-[var(--color-gold)] bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-nude)]"
+                    }`}
+                  >
+                    {s.start}
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>
@@ -449,7 +560,7 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
               rows={3}
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button
             onClick={submit}
             disabled={saving}

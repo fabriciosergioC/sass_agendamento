@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:slots": "node --no-warnings --experimental-strip-types --experimental-detect-module --test scripts/test-slots.mjs",
     "pwa:icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-pwa-icons.ps1"
   },
   "dependencies": {
