@@ -37,18 +37,11 @@ async function BookingWizardLoader() {
 }
 
 export default function Home() {
-  const portalBaseUrl = (
-    process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ||
-    "https://gestao-estetica.up.railway.app"
-  ).replace(/\/+$/, "");
-  const portalSlug = process.env.NEXT_PUBLIC_CLINIC_SLUG || "bela-face";
-  const portalUrl = `${portalBaseUrl}/c/${portalSlug}`;
-
   return (
     <main className="min-h-screen bg-[var(--color-background)] py-8 text-[var(--color-text-primary)]">
       <div className="mx-auto max-w-md px-5 mb-4 flex items-center justify-between gap-3">
         <a
-          href={portalUrl}
+          href="/login"
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface)]"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
