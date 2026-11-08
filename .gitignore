@@ -56,3 +56,6 @@ parar-ngrok.bat
 .env*.local
 .next/
 node_modules/
+.vercel/
+
+.vercel
