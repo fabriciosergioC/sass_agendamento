@@ -254,6 +254,20 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
     setError("");
   }
 
+  function goBack() {
+    setError("");
+    if (step === 5) setTime("");
+    if (step === 4) {
+      slotsRequestIdRef.current += 1;
+      slotsRequestRef.current?.abort();
+      slotsLoadedRef.current = false;
+      setSlots([]);
+      setSlotsUpdatedAt(null);
+      setTime("");
+    }
+    setStep((current) => Math.max(1, current - 1));
+  }
+
   const todayStr = clinicToday();
   const [y, m, d] = date.split("-").map(Number);
   const dateLabel = d && m
@@ -376,6 +390,20 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
           );
         })}
       </ol>
+
+      {step > 1 && (
+        <button
+          type="button"
+          onClick={goBack}
+          className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface)]"
+          aria-label="Voltar para a etapa anterior"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current stroke-2" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Voltar
+        </button>
+      )}
 
       {step === 1 && (
         <section className="space-y-3">
