@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { InstallPwa } from "@/components/InstallPwa";
 import { bootstrapScript } from "@/lib/theme";
 
 const geistSans = Geist({
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
         <ServiceWorkerRegister />
+        <InstallPwa />
       </body>
     </html>
   );

@@ -21,6 +21,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     // standalone = abre em janela própria, sem a barra do navegador: parece um app
     display: "standalone",
+    // Prioriza janela própria também no Windows/ChromeOS e mantém janela mínima se
+    // o navegador ainda não oferecer o modo standalone completo.
+    display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
     lang: "pt-BR",
     dir: "ltr",
     // cor da tela de abertura (splash) enquanto a página carrega
