@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // ... (mantém o objeto original)
   // Disable sharing image by providing empty image arrays
   openGraph: { title: "Agendamento", description: "Agende seu horário direto pelo celular.", type: "website", images: [] },
   twitter: { card: "summary", images: [] },
@@ -25,11 +26,10 @@ export const metadata: Metadata = {
   title: "Agendamento",
   description: "Agende seu horário direto pelo celular.",
   applicationName: "Agendamento",
-  // O <link rel="manifest"> vem do arquivo src/app/manifest.ts, injetado pelo Next.
-  icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/apple-icon.png",
-  },
+  // Ícones removidos para exibir apenas o título "Agendamento" na instalação do PWA.
+  // Atenção: um arquivo app/favicon.ico seria injetado automaticamente pelo Next
+  // (e o Chrome o usaria como ícone do PWA), por isso ele foi removido do projeto.
+  icons: { icon: [], apple: [] },
   // iOS não usa o manifest para o "Adicionar à Tela de Início": estas três linhas são
   // o que faz o app abrir em janela própria, com o nome e a barra de status certos.
   appleWebApp: {
@@ -63,9 +63,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
         <script
           dangerouslySetInnerHTML={{
-            __html: bootstrapScript(),
+            __html: `${bootstrapScript()}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}`,
           }}
         />
       </head>
