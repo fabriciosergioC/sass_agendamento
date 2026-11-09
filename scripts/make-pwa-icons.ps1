@@ -1,6 +1,10 @@
 # Gera os icones do PWA (Bela Face: monograma dourado sobre grafite) desenhando com GDI+.
 # Nao instala nada: so System.Drawing, que ja vem no Windows PowerShell 5.1.
 #
+# ATENCAO: os icones atuais de public\icons vieram de uma foto (Gemini_Generated_Image)
+# gerada com sharp. Rodar este script SOBRESCREVE todos eles com o monograma antigo.
+# Use apenas se quiser voltar ao icone de monograma.
+#
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-pwa-icons.ps1
 #
 # Saida em public\icons (cada tamanho desenhado na resolucao final, nao redimensionado):

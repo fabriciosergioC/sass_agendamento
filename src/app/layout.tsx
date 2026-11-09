@@ -26,10 +26,19 @@ export const metadata: Metadata = {
   title: "Agendamento",
   description: "Agende seu horário direto pelo celular.",
   applicationName: "Agendamento",
-  // Ícones removidos para exibir apenas o título "Agendamento" na instalação do PWA.
-  // Atenção: um arquivo app/favicon.ico seria injetado automaticamente pelo Next
-  // (e o Chrome o usaria como ícone do PWA), por isso ele foi removido do projeto.
-  icons: { icon: [], apple: [] },
+  // Ícone da instalação e da aba. Atenção: um arquivo app/favicon.ico seria
+  // injetado automaticamente pelo Next e teria prioridade sobre estes links,
+  // por isso ele continua fora do projeto.
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   // iOS não usa o manifest para o "Adicionar à Tela de Início": estas três linhas são
   // o que faz o app abrir em janela própria, com o nome e a barra de status certos.
   appleWebApp: {
