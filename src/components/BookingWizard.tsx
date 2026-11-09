@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useTheme } from "./theme";
 import { buildSlotsUrl, clinicToday, parseSlots, slotReasonLabel, slotsEqual, type Slot } from "@/lib/slots";
+import { saveClinic, savePhone } from "@/lib/client-session";
 
 type Svc = {
   id: string;
@@ -225,6 +227,10 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
         }
         return;
       }
+      // Guarda a clínica e o WhatsApp usados agora: o atalho "Meus agendamentos"
+      // já abre com o telefone preenchido para consultar/cancelar.
+      saveClinic(org.slug, org.name);
+      savePhone(phone.trim());
       setDone(data.appointment);
     } catch {
       setError("Não foi possível agendar. Verifique sua conexão.");
@@ -336,6 +342,13 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
         >
           Fazer outro agendamento
         </button>
+        <Link
+          href="/meus-agendamentos"
+          className="mt-2 block w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: accent }}
+        >
+          Acompanhar meu agendamento
+        </Link>
       </div>
     );
   }
