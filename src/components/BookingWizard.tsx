@@ -33,6 +33,7 @@ type OrgInfo = {
   state: string | null;
   instagram: string | null;
   phone: string | null;
+  whatsapp: string | null;
 };
 
 type DoneState = {
@@ -49,6 +50,29 @@ const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "jul
 
 function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/**
+ * Telefone cadastrado → link do WhatsApp. Aceita "(31) 9...", "5531..." ou "+55 31...";
+ * abaixo de 12 dígitos assumimos que falta o DDI (55), o que também protege números
+ * com DDD 55 (RS), que têm só 11 dígitos.
+ */
+function whatsappHref(raw: string | null): string | null {
+  const digits = raw?.replace(/\D/g, "") ?? "";
+  if (!digits) return null;
+  return `https://wa.me/${digits.length >= 12 ? digits : `55${digits}`}`;
+}
+
+/**
+ * Instagram cadastrado → link do perfil. Aceita a URL completa, o usuário com
+ * "@" ou só o nome do perfil; o painel permite qualquer um dos formatos.
+ */
+function instagramHref(raw: string | null): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  const handle = value.replace(/^@+/, "").trim();
+  return handle ? `https://www.instagram.com/${handle}` : null;
 }
 
 export default function BookingWizard({ org }: { org: OrgInfo }) {
@@ -80,6 +104,10 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
 
   // Usa a cor do tema atual do provedor, caindo de volta para a da org se necessário
   const accent = colors.accent;
+  // O backend antigo nem sempre devolve "whatsapp" no config público; nesse
+  // caso o telefone principal da clínica serve para abrir a conversa.
+  const waHref = whatsappHref(org.whatsapp ?? org.phone);
+  const igHref = instagramHref(org.instagram);
 
   useEffect(() => {
     (async () => {
@@ -371,6 +399,40 @@ export default function BookingWizard({ org }: { org: OrgInfo }) {
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
             {org.city}{org.city && org.state ? " · " : ""}{org.state}
           </p>
+        )}
+        {(waHref || igHref) && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {waHref && (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{ backgroundColor: accent }}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.26 8.26 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.55-3.7 8.24-8.24 8.24zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.39 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.14-1.18-.06-.11-.22-.17-.47-.29z" />
+                </svg>
+                Falar no WhatsApp
+              </a>
+            )}
+            {igHref && (
+              <a
+                href={igHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{ borderColor: accent, color: accent }}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                </svg>
+                Instagram
+              </a>
+            )}
+          </div>
         )}
       </header>
 
