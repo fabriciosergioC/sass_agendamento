@@ -1,15 +1,41 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import BookingWizard from "@/components/BookingWizard";
 import { ThemeMenu } from "@/components/theme";
 import { BACKEND_URL } from "@/lib/backend";
 import { getCurrentClient } from "@/lib/client-portal";
+import { CLINIC_COOKIE } from "@/lib/client-session";
 
-async function getOrgConfig() {
+/**
+ * Clínica usada quando o endereço não diz qual abrir. O app nasceu como o PWA
+ * da Bela Face, então esse continua sendo o padrão para quem entra pela raiz.
+ */
+const DEFAULT_CLINIC_SLUG = "bela-face";
+
+/**
+ * Clínica do agendamento: o link (`/?clinica=bela-essencia`) manda mais que a
+ * clínica lembrada no aparelho pelo login. Antes o slug era fixo em "bela-face",
+ * então o Instagram cadastrado nas Configurações de outra clínica nunca aparecia.
+ */
+async function resolveClinicSlug(searchParams: Promise<{ clinica?: string }>): Promise<string> {
+  const { clinica } = await searchParams;
+  // Só slug simples entra na URL do backend; qualquer outra coisa cai no padrão.
+  const fromLink = clinica?.trim().toLowerCase();
+  if (fromLink && /^[a-z0-9-]+$/.test(fromLink)) return fromLink;
+
+  const store = await cookies();
+  const remembered = store.get(CLINIC_COOKIE)?.value?.trim().toLowerCase();
+  if (remembered && /^[a-z0-9-]+$/.test(remembered)) return remembered;
+  return DEFAULT_CLINIC_SLUG;
+}
+
+async function getOrgConfig(slug: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/public/bela-face/config`, {
-      cache: "no-store",
-    });
+    const res = await fetch(
+      `${BACKEND_URL}/api/public/${encodeURIComponent(slug)}/config`,
+      { cache: "no-store" }
+    );
     if (!res.ok) return null;
     const data = await res.json();
     return data.org;
@@ -18,8 +44,13 @@ async function getOrgConfig() {
   }
 }
 
-async function BookingWizardLoader() {
-  const org = await getOrgConfig();
+async function BookingWizardLoader({
+  searchParams,
+}: {
+  searchParams: Promise<{ clinica?: string }>;
+}) {
+  const slug = await resolveClinicSlug(searchParams);
+  const org = await getOrgConfig(slug);
 
   if (!org) {
     return (
@@ -27,8 +58,8 @@ async function BookingWizardLoader() {
         <div className="text-center">
           <h1 className="text-lg font-semibold text-red-600">Erro ao carregar organização</h1>
           <p className="text-sm text-gray-600 mt-2">
-            O backend não respondeu em {BACKEND_URL}. Rode <code>npm run dev</code> na pasta
-            do sass estetica (porta 3001) e recarregue.
+            O backend não respondeu em {BACKEND_URL} para a clínica <code>{slug}</code>.
+            Rode <code>npm run dev</code> na pasta do sass estetica (porta 3001) e recarregue.
           </p>
         </div>
       </div>
@@ -98,7 +129,11 @@ function GuestHeader() {
   );
 }
 
-export default function Home() {
+export default function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ clinica?: string }>;
+}) {
   return (
     <main className="min-h-screen bg-[var(--color-background)] py-8 text-[var(--color-text-primary)]">
       <Suspense fallback={<GuestHeader />}>
@@ -109,7 +144,7 @@ export default function Home() {
           <p className="text-sm text-[var(--color-text-secondary)]">Carregando...</p>
         </div>
       }>
-        <BookingWizardLoader />
+        <BookingWizardLoader searchParams={searchParams} />
       </Suspense>
     </main>
   );
